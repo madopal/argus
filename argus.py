@@ -3,6 +3,7 @@
 import os
 import sys
 import requests
+import datetime
 
 from argparse import ArgumentParser
 
@@ -25,6 +26,8 @@ def parse_cmd_args():
     parser.add_argument('--routes',
                         help='which routes to return info for',
                         nargs='+')
+    parser.add_argument('--direction',
+                        help='which direction to use')
 
     args = parser.parse_args()
 
@@ -75,7 +78,7 @@ def get_bus_stops(api_key=None,
                   direction=None):
     payload = {'key': api_key,
                'format': 'json',
-               'rt': routes,
+               'rt': route,
                'dir': direction}
     r = requests.get(BASE_URL + "getstops",
                      params=payload)
@@ -84,9 +87,14 @@ def get_bus_stops(api_key=None,
 
 args = parse_cmd_args()
 if args.choices == 'schedule':
-    get_bus_arrivals(api_key=args.api_key,
-                     routes=args.routes,
-                     stops=args.stops)
+    cur_time = datetime.datetime.now()
+    arrivals = get_bus_arrivals(api_key=args.api_key,
+                                routes=args.routes,
+                                stops=args.stops)
+    for arrival in arrivals.json()['bustime-response']['prd']:
+        new_time = datetime.datetime.strptime(arrival['prdtm'], "%Y%m%d %H:%M")
+        print '{:2d}: {:.1f} min'.format(int(arrival['rt']),
+                (new_time - cur_time).total_seconds() / 60)
 elif args.choices == 'routes':
     route_info = get_bus_routes(api_key=args.api_key)
     for route, route_data in route_info.iteritems():
@@ -94,6 +102,8 @@ elif args.choices == 'routes':
             print route_data
         
 elif args.choices == 'stops':
-    stop_info = get_bus_stops(api_key=args.api_key,
-                              route=args.routes,
-                              direction=None)
+    for route in args.routes:
+        stop_info = get_bus_stops(api_key=args.api_key,
+                                  route=route,
+                                  direction=args.direction)
+        print stop_info.json()
