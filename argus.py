@@ -91,10 +91,16 @@ if args.choices == 'schedule':
     arrivals = get_bus_arrivals(api_key=args.api_key,
                                 routes=args.routes,
                                 stops=args.stops)
-    for arrival in arrivals.json()['bustime-response']['prd']:
-        new_time = datetime.datetime.strptime(arrival['prdtm'], "%Y%m%d %H:%M")
-        print '{:2d}: {:.1f} min'.format(int(arrival['rt']),
-                (new_time - cur_time).total_seconds() / 60)
+    result_json = arrivals.json()
+    if 'prd' in result_json['bustime-response'].keys():
+        for arrival in arrivals.json()['bustime-response']['prd']:
+            new_time = datetime.datetime.strptime(arrival['prdtm'], "%Y%m%d %H:%M")
+            print '{:2d}: {:.1f} min'.format(int(arrival['rt']),
+                    (new_time - cur_time).total_seconds() / 60)
+    elif 'error' in result_json['bustime-response'].keys():
+        for error in result_json['bustime-response']['error']:
+            print '{}: {}'.format(int(error['rt']), error['msg'])
+
 elif args.choices == 'routes':
     route_info = get_bus_routes(api_key=args.api_key)
     for route, route_data in route_info.iteritems():
